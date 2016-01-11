@@ -1,0 +1,113 @@
+{
+	"_version": "1.1.0",
+	"sap.app": {
+		"_version": "1.1.0",
+		"id": "sap.ui.demo.SapRestDemo",
+		"type": "application",
+		"i18n": "i18n/appTexts.properties",
+		"title": "{{appTitle}}",
+		"description": "{{appDescription}}",
+		"applicationVersion": {
+			"version": "1.0.0"
+		},
+		"ach": "CA-UI5-DOC"
+	},
+	"sap.ui": {
+		"_version": "1.1.0",
+		"technology": "UI5",
+		"deviceTypes": {
+			"desktop": true,
+			"tablet": true,
+			"phone": true
+		},
+		"supportedThemes": ["sap_hcb","sap_bluecrystal"],
+	 	"icons": {
+	 		"icon": "sap-icon://Fiori2/F0394",
+			"phone" : "img/57_iPhone_Desktop_Launch.png",
+			"phone@2" : "img/114_iPhone-Retina_Web_Clip.png",
+			"tablet" : "img/72_iPad_Desktop_Launch.png",
+			"tablet@2" : "img/144_iPad_Retina_Web_Clip.png",
+			"favicon" : "img/favicon.ico"
+	 	}	
+  	},
+	"sap.ui5": {
+		"_version": "1.1.0",
+		"rootView": "sap.ui.demo.SapRestDemo.view.App",
+		"resources": {
+        	"js": [
+            	{
+                	"uri": "localService/BaseController.js",
+					"uri": "localService/tools.js"                	
+            	}
+        	],
+        	"css": [
+            	{
+                	"uri": "css/style.css"
+            	}
+        	]
+    	},		
+		"dependencies": {
+			"minUI5Version": "1.30",
+			"libs": {
+				"sap.m": { }
+			}
+		},
+		"models": {
+			"i18n": {
+				"type": "sap.ui.model.resource.ResourceModel",
+				"settings": {
+					"bundleName": "sap.ui.demo.SapRestDemo.i18n.i18n"
+				}
+			}
+		},
+		"routing": {
+			"config": {
+				"routerClass": "sap.m.routing.Router",
+				"viewType": "XML",
+				"viewPath": "sap.ui.demo.SapRestDemo.view",
+				"controlId": "splitApp",
+				"controlAggregation": "pages",
+				"transition": "slide",
+				"bypassed": {
+					"target": ["home" , "notFound"]
+				}
+			},
+			"routes": [
+				{
+					"pattern": "",
+					"name": "Master",
+					"target": "Master"
+				},
+				{
+					"pattern": "Detail/{id}",
+					"name": "Detail",
+					"target": ["Master" , "Detail"]
+				}
+			],
+			
+			"targets": {
+				"Detail": {
+					"viewName": "Detail",
+					"viewLevel": 2,
+					"controlAggregation": "detailPages"
+				},
+				"Master": {
+					"viewName": "Master",
+					"viewLevel": 1,
+					"controlAggregation": "masterPages"
+				},
+				"notFound": {
+					"viewName": "NotFound",
+					"viewLevel": 2,
+					"controlAggregation": "detailPages"
+				},
+				"welcome": {
+					"viewName": "Welcome",
+					"viewLevel": 0,
+					"controlAggregation": "detailPages"
+				}
+			}
+			
+		}
+	}
+}

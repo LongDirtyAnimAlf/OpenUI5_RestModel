@@ -1,0 +1,58 @@
+<mvc:View controllerName="sap.ui.demo.SapRestDemo.view.Master"
+	xmlns="sap.m"
+	xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:h="http://www.w3.org/1999/xhtml">
+	<Page
+		id="page"
+		title="{i18n>HOME_TITLE}"
+		showFooter="{device>/isNoPhone}" >
+		<subHeader>
+			<Toolbar id="searchBar">
+				<SearchField
+					id="searchField"
+					showRefreshButton="{device>/isNoTouch}"
+					placeholder="{i18n>USER_SEARCH_PLACEHOLDER}"
+					search="handleSearch"
+					tooltip="{i18n>USER_SEARCH_TOOLTIP}"
+					width="100%">
+				</SearchField>
+			</Toolbar>
+		</subHeader>
+		<footer>
+			<Toolbar id="SearchButtonsToolbar">
+				<Button
+					icon="sap-icon://sort"
+					id="SortButton" 
+					text="{i18n>USER_SORT_BUTTON_TEXT}"
+					press="handleUserSortButtonPress" />
+			</Toolbar>
+		</footer>
+		<content>
+			<!-- This list shows the Teams -->
+			<List
+				id="UserList"
+				headerText="{i18n>USER_LIST_HEADER}"
+				select="handleUserListSelect"
+				mode="{device>/listMode}"
+				noDataText="{i18n>USER_NO_DATA}"
+				items="{
+					path : '/users',
+					sorter : {
+						path : 'login',
+						descending: false
+					}
+				}">
+				<items>
+					<ObjectListItem
+						type="{device>/listItemType}"
+						icon="{avatar_url}"
+						title="{login}"
+						press="handleUserListItemPress"
+						iconDensityAware="false" >
+					</ObjectListItem>
+				</items>
+			</List>
+		</content>
+	</Page>
+</mvc:View>

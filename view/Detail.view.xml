@@ -1,0 +1,94 @@
+<mvc:View
+	controllerName="sap.ui.demo.SapRestDemo.view.Detail"
+	xmlns="sap.m"
+	xmlns:layout="sap.ui.layout"	
+	xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:control="control"
+	xmlns:h="http://www.w3.org/1999/xhtml">	
+	<Page
+		id="page"
+		title="{login}"
+		showNavButton="{device>/isPhone}"
+		navButtonPress="handleNavButtonPress" >
+		<headerContent>
+			<Link
+				text="Goto User Github site"
+				emphasized="true"
+				href="{html_url}"/>
+		</headerContent>			
+		<footer>
+			<Toolbar>
+				<ToolbarSpacer/>
+				<Button
+					icon="sap-icon://email"
+					text="{i18n>USER_MAIL_BUTTON_TEXT}"
+					press="handleUserMailButtonPress" />
+			</Toolbar>
+		</footer>
+		<content>
+			<Toolbar>
+				<Title text="Github User ID : {login}" level="H2"/>
+			</Toolbar>
+			<ObjectHeader
+				title="{name}">
+				<attributes>
+					<ObjectAttribute
+						text="{company}" />
+					<ObjectAttribute
+						text="{location}" />
+					<ObjectAttribute
+						text="{description}" />
+					<ObjectAttribute
+						text="{bio}" />
+				</attributes>
+			</ObjectHeader>
+			<VBox alignItems="Center">
+				<Image
+					src= "{avatar_url}"
+					decorative="true"
+					densityAware="false" />
+			</VBox>
+			<VBox>
+				<Toolbar>
+					<Title text="Users repo's" level="H2"/>
+				</Toolbar>
+				<Table
+					id="RepoTable"
+					width="auto"
+					class="sapUiResponsiveMargin"
+					items="{dummy}"
+					noDataText="No repo's found">
+					<columns>
+						<Column>
+							<Text text="Name"/>
+						</Column>
+						<Column>
+							<Text text="Description"/>
+						</Column>
+						<Column>
+							<Text text="Language"/>
+						</Column>
+						<Column>
+							<Text text="Link"/>
+						</Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<cells>
+								<Text
+            						text="{name}" />
+								<Text
+            						text="{description}" />
+								<Text
+            						text="{language}" />
+								<Link
+								 	text="Goto repo" href="{html_url}" target="_blank"/>            						
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>			
+		</content>
+	</Page>
+</mvc:View>
