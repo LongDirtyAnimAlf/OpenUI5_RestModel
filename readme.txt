@@ -1,6 +1,6 @@
 The OpenUI5 OData model has a lot of nice features that are not available for use with a standard REST server.
 
-Standard REST servers do not expoe metadata.
+Standard REST servers do not expose metadata.
 Therefor, OPENUI5 users have to stick with the JSON model for plain REST.
 
 But the JSON model is a pure client side model, lacking many features.
