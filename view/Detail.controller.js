@@ -25,9 +25,9 @@ sap.ui.define([
 			var oModel = oView.getModel();
 			var sPath = "/users/"+sId;
 			var oData = oModel.getProperty(sPath);
-			
-			console.log(oModel);
-			
+
+      //parameters : {select:'login'}
+
 			oView.bindElement({
 				path: sPath,
 				events: {
@@ -37,7 +37,8 @@ sap.ui.define([
 					dataReceived: function () {
 						oView.setBusy(false);
 					}
-				}
+				},
+        parameters : {select:'name,company,location,bio,email,avatar_url',key:'login'}
 			});
 			
 			//if there is no data the model has to request new data

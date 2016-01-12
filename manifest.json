@@ -1,7 +1,7 @@
 {
-	"_version": "1.1.0",
+	"_version": "1.3.0",
 	"sap.app": {
-		"_version": "1.1.0",
+		"_version": "1.3.0",
 		"id": "sap.ui.demo.SapRestDemo",
 		"type": "application",
 		"i18n": "i18n/appTexts.properties",
@@ -13,7 +13,7 @@
 		"ach": "CA-UI5-DOC"
 	},
 	"sap.ui": {
-		"_version": "1.1.0",
+		"_version": "1.3.0",
 		"technology": "UI5",
 		"deviceTypes": {
 			"desktop": true,
@@ -22,7 +22,7 @@
 		},
 		"supportedThemes": ["sap_hcb","sap_bluecrystal"],
 	 	"icons": {
-	 		"icon": "sap-icon://Fiori2/F0394",
+	 		"icon": "sap-icon://detail-view",
 			"phone" : "img/57_iPhone_Desktop_Launch.png",
 			"phone@2" : "img/114_iPhone-Retina_Web_Clip.png",
 			"tablet" : "img/72_iPad_Desktop_Launch.png",
@@ -31,7 +31,7 @@
 	 	}	
   	},
 	"sap.ui5": {
-		"_version": "1.1.0",
+		"_version": "1.2.0",
 		"rootView": "sap.ui.demo.SapRestDemo.view.App",
 		"resources": {
         	"js": [
@@ -47,16 +47,28 @@
         	]
     	},		
 		"dependencies": {
-			"minUI5Version": "1.30",
+			"minUI5Version": "1.34",
 			"libs": {
-				"sap.m": { }
+				"sap.ui.core": {
+					"minVersion": "1.34.0"
+				},
+				"sap.m": {
+					"minVersion": "1.34.0"
+				},
+				"sap.ui.layout" : {
+					"minVersion": "1.34.0"
+				}
 			}
+		},
+		"contentDensities": {
+			"compact": true,
+			"cozy": true
 		},
 		"models": {
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "sap.ui.demo.SapRestDemo.i18n.i18n"
+					"bundleName": "sap.ui.demo.SapRestDemo.i18n.appTexts"
 				}
 			}
 		},
@@ -70,7 +82,8 @@
 				"transition": "slide",
 				"bypassed": {
 					"target": ["home" , "notFound"]
-				}
+				},
+        		"async": true
 			},
 			"routes": [
 				{

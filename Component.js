@@ -1,11 +1,13 @@
 sap.ui.define([
 	'sap/ui/core/UIComponent',
+	'sap/ui/Device',	
 	'sap/m/routing/Router',
 	'sap/ui/model/resource/ResourceModel',
 	'sap/ui/model/json/JSONModel',
     'sap/ui/demo/SapRestDemo/model/Config',
 	'sap/ui/demo/SapRestDemo/localService/RestModel/RestModel'
 ], function (UIComponent,
+			Device,
 			Router,
 			ResourceModel,
 			JSONModel,
@@ -21,14 +23,26 @@ sap.ui.define([
 			// call overwritten init (calls createContent)
 			UIComponent.prototype.init.apply(this, arguments);
 
-			// set i18n model
-			var oI18nModel = new ResourceModel({
-				bundleName: "sap.ui.demo.SapRestDemo.i18n.appTexts"
-			});
-			this.setModel(oI18nModel, "i18n");
-
+			//var oModel = new sap.ui.model.rest.RestModel(model.Config.getServiceUrl("/root"));
+			//oModel.setKey("ID");			
 			var oModel = new sap.ui.model.rest.RestModel("https://api.github.com");
 			oModel.setKey("login");			
+
+			oModel.attachRequestCompleted(function(data) {
+				console.log("oModel.attachRequestCompleted");
+				 var model = data.getSource();
+				 console.log(model);
+			});
+			oModel.attachRequestSent(function(data) {
+				console.log("oModel.attachRequestSent");
+				 var model = data.getSource();
+				 console.log(model);
+			});
+			oModel.attachRequestFailed(function(data) {
+				console.log("oModel.attachRequestFailed");
+				 var model = data.getSource();
+				 console.log(model);
+			});
 
 			this.setModel(oModel);
 

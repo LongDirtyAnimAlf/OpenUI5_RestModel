@@ -20,15 +20,14 @@ sap.ui.define([
     'sap/ui/model/odata/v2/ODataModel',
     'sap/ui/model/Context',
     'sap/ui/model/odata/ODataUtils',
-	'sap/ui/model/odata/CountMode', 'sap/ui/model/odata/UpdateMethod', 'sap/ui/model/odata/OperationMode',
-	'./RestMetadata'
+	'sap/ui/model/odata/CountMode', 'sap/ui/model/odata/UpdateMethod', 'sap/ui/model/odata/OperationMode'
 	], function(
 		jQuery,
 		ODataModel,
 		Context,
 		ODataUtils,
-		CountMode, UpdateMethod, OperationMode,
-		RestMetadata) {
+		CountMode, UpdateMethod, OperationMode
+		) {
 
 	"use strict";
 
@@ -62,32 +61,18 @@ sap.ui.define([
 			this.bJSON = true;
 			this.sDefaultCountMode = CountMode.None;
 			this.sDefaultOperationMode = OperationMode.Client;
+			this.sDefaultUpdateMethod = UpdateMethod.Put;			
 			
 			this.oHeaders["Accept"] = "application/json";
 
-			// destroy current metadata object
-			// it is not suitable for non odata REST servers
-			this.oMetadata.destroy();
-			
-			// create new (dummy) metadata object
-			// dummy could even be used to load dataobjects from REST, but not yet now ... work in progress
-			this.oMetadata = new RestMetadata(
-				"",{
-					async: false,
-					user: "",
-					password: "",
-					headers: "",
-					namespaces: null,
-					withCredentials: false
-				} 					
-			);
-			this.oServiceData.oMetadata = this.oMetadata;
-			
-			// trick to access metadata from model itself ...
-			this.oMetadata.setModel(this);
-			
-			this.pAnnotationsLoaded = this.oMetadata.loaded();
-			
+			// dummy values for the metadata object ... needed !!!
+			this.oMetadata.oMetadata = {version : "0.0"};
+			this.oMetadata.oMetadata.dataServices = {
+					dataServiceVersion: "0.0",
+					schema : []
+			};
+			this.oMetadata.bLoaded = true;
+			this.oMetadata.bFailed = false;			
 		},
 		metadata : {
 			publicMethods : ["setKey","setmORMotRootResponse"]
@@ -103,12 +88,9 @@ sap.ui.define([
 	};  	
 	
 	RestModel.prototype._initializeMetadata = function(bDelayEvent) {
+		this.oMetadata.bLoaded = true;
+		this.oMetadata.bFailed = false;			
 	};
-
-	RestModel.prototype.getServiceMetadata = function() {
-		return true;
-	};
-
 
 	// adapted for non odata REST servers
 	// not finshed yet
@@ -125,11 +107,17 @@ sap.ui.define([
 				aCustomParams.push(sName + "=" + jQuery.sap.encodeURL(mParameters[sName]));
 				bSelect = (bSelect || sName=="select");
 			}
+			if (sName === "custom") {
+				mCustomQueryOptions = mParameters[sName];
+				for (sName in mCustomQueryOptions) {
+					aCustomParams.push(sName + "=" + jQuery.sap.encodeURL(mCustomQueryOptions[sName]));
+				}
+			}
 		}
 		
 		if (!bSelect && this.bmORMotRootResponse) {
 			//aCustomParams.push("select=" + jQuery.sap.encodeURL(''));
-			aCustomParams.push("select=" + jQuery.sap.encodeURL('*'));
+			//aCustomParams.push("select=" + jQuery.sap.encodeURL('*'));
 		}
 		return aCustomParams.join("&");
 	};
@@ -163,7 +151,7 @@ sap.ui.define([
 		
 		var sKey;
 		var sDataKey;
-
+		
 		if (!sResolvedPath) {
 			return oNode;
 		}
@@ -193,7 +181,7 @@ sap.ui.define([
 		}
 
 		oOrigNode = this.oData[sKey];
-		if (!oOrigNode && sDataKey) {
+		if (!oOrigNode && sDataKey && ((iIndex-iDataIndex)==1)) {
 			sKey = sDataKey;
 			iIndex = iDataIndex;
 		}
@@ -202,7 +190,7 @@ sap.ui.define([
 		oChangedNode = this.mChangedEntities[sKey];
 
 		aParts.splice(0,(iIndex));
-
+		
 		if (!bOriginalValue) {
 			oNode = !sKey ? this.oData : oChangedNode || oOrigNode;
 		} else {
@@ -235,7 +223,6 @@ sap.ui.define([
 		}
 		return oNode;
 	};
-
 	
 	// adapted for standard jquery ajax command for sending and retrieving data and compensate for missing metadata
 	RestModel.prototype._submitRequest = function(oRequest, fnSuccess, fnError){
@@ -258,8 +245,10 @@ sap.ui.define([
 			
 			// get the key that has been generated during the creation of the binding context
 			var oEntityType = that.oMetadata._getEntityTypeByPath(sPath); 			
-			var sKey = oEntityType.key.name;			
-
+			var sKey = oEntityType.key.name;
+			var oProperty = oEntityType.property;			
+			var oNewProperty = [];
+			
 			if (jQuery.sap.endsWith(that.sServiceUrl,'/')) {
 				sPath = that.sServiceUrl + sPath.substr(1);
 			} else {
@@ -268,10 +257,13 @@ sap.ui.define([
 
 			var aNewResponse = {};			
 			
-			// add uri to mimic odata results ... bit of a trick ... ;-)
+			// add uri and property to mimic odata metadata results ... bit of a trick ... ;-)
 			if (oData) {
 
 				if (jQuery.isArray(oData)) {
+					for (var sName in oData[0]) {
+						oNewProperty.push({name : sName});
+					}
 					for (var attr in oData) {
 						oData[attr].__metadata = {
 							uri: sPath+"/"+oData[attr][sKey],
@@ -280,12 +272,17 @@ sap.ui.define([
 					}
 					aNewResponse.data = { results:oData};
 				} else {
+					for (var sName in oData) {
+						oNewProperty.push({name : sName});
+					}
 					oData.__metadata = {
 							uri: sPath,
 							id: sPath
 					}
 					aNewResponse.data = oData;
 				}
+				
+				$.extend(true, oProperty, oNewProperty);
 			}
 
 			aNewResponse.statusCode = jqXHR.status;
@@ -459,90 +456,6 @@ sap.ui.define([
 		return oRequest;
 	};
 
-	// adapted for REST that does not transmit all results as an array with a results header
-	// and for missing metadata
-	RestModel.prototype.read = function(sPath, mParameters) {
-		var oRequest, sUrl,
-		oContext, mUrlParams, fnSuccess, fnError,
-		aFilters, aSorters, sFilterParams, sSorterParams,
-		oEntityType, sNormalizedPath,
-		aUrlParams, mHeaders, sMethod,
-		sGroupId, sETag,
-		mRequests,
-		that = this;
-
-		// The object parameter syntax has been used.
-		if (mParameters) {
-			oContext	= mParameters.context;
-			mUrlParams	= mParameters.urlParameters;
-			fnSuccess	= mParameters.success;
-			fnError		= mParameters.error;
-			aFilters	= mParameters.filters;
-			aSorters	= mParameters.sorters;
-			sGroupId 	= mParameters.groupId || mParameters.batchGroupId;
-			mHeaders 	= mParameters.headers;
-		}
-		//if the read is triggered via a refresh we should use the refreshGroupId instead
-		if (this.sRefreshGroupId) {
-			sGroupId = this.sRefreshGroupId;
-		}
-		
-		aUrlParams = ODataUtils._createUrlParamsArray(mUrlParams);
-		mHeaders = this._getHeaders(mHeaders);
-		sMethod = "GET";
-		sETag = this._getETag(sPath, oContext);
-		
-		function createReadRequest() {
-			// Add filter/sorter to URL parameters
-			sSorterParams = ODataUtils.createSortParams(aSorters);
-			if (sSorterParams) {
-				aUrlParams.push(sSorterParams);
-			}
-
-			var sTempPath = sPath;
-			var iIndex = sPath.indexOf("$count");
-			// check if we have a manual count request with filters. Then we have to manually adjust the path.
-			if (iIndex !== -1) {
-				sTempPath = sPath.substring(0, iIndex - 1);
-			}
-			
-			sNormalizedPath = that._normalizePath(sTempPath, oContext);
-			
-			oEntityType = that.oMetadata._getEntityTypeByPath(sNormalizedPath); 			
-			
-			sFilterParams = ODataUtils.createFilterParams(aFilters, that.oMetadata, oEntityType);
-			if (sFilterParams) {
-				aUrlParams.push(sFilterParams);
-			}
-
-			sUrl = that._createRequestUrl(sPath, oContext, aUrlParams, that.bUseBatch);
-			oRequest = that._createRequest(sUrl, sMethod, mHeaders, null, sETag);
-
-			mRequests = that.mRequests;
-			if (sGroupId in that.mDeferredGroups) {
-				mRequests = that.mDeferredRequests;
-			}
-			that._pushToRequestQueue(mRequests, sGroupId, null, oRequest, fnSuccess, fnError);
-
-			return oRequest;
-		}
-
-		// In case we are in batch mode and are processing refreshes before sending changes to the server,
-		// the request must be processed synchronously to be contained in the same batch as the changes
-		if (this.bUseBatch && this.bIncludeInCurrentBatch) {
-			oRequest = createReadRequest();
-			return {
-				abort: function() {
-					if (oRequest) {
-						oRequest._aborted = true;
-					}
-				}
-			};
-		} else {
-			return this._processRequest(createReadRequest);
-		}
-	};
-
 	// send and retrieve data with standard jquery ajax 
 	RestModel.prototype._request = function(oRequest, fnSuccess, fnError) {
 
@@ -627,10 +540,7 @@ sap.ui.define([
 
 	RestModel.prototype.isList = function(sPath, oContext) {
 		sPath = this.resolve(sPath, oContext);
-		// tricky ... ;-)
-		// just for the mORMot
-		// only needed for tree-binding, so not that important yet ... ;-)
-		return sPath && !sPath.substr(sPath.lastIndexOf("/")+1).isNumeric;
+		return jQuery.isArray(this._getObject(sPath)); 		
 	};
 	
 	RestModel.prototype._parseResponse = function(oResponse, oRequest, mGetEntities, mChangeEntities) {
@@ -649,15 +559,21 @@ sap.ui.define([
 	RestModel.prototype._createmetakey = function(sPath, mParameters) {
 		var that = this;
 
+		// only process absolute paths
+		if (!jQuery.sap.startsWith(sPath, "/")) {
+			return;
+		}		
+		
 		if (!that.oMetadata.mEntityTypes[sPath]) {
 			that.oMetadata.mEntityTypes[sPath] = {};
 		}
 		var oEntityType = that.oMetadata.mEntityTypes[sPath];
-		
-		if (!oEntityType["key"]) {
-			oEntityType["key"] = {};
+
+		if (!oEntityType.key) {
+			oEntityType.key = {};
 		}
-		var aKey = oEntityType["key"];
+		
+		var aKey = oEntityType.key;		
 		
 		if (!aKey.name) {
 			if (mParameters && mParameters.key) {
@@ -666,11 +582,22 @@ sap.ui.define([
 				if (that.sKey) {
 					aKey.name = this.sKey;
 				} else {
+					// default value of key
 					aKey.name = "ID";
 				}
 			}
 		}
+
 		jQuery.sap.assert(aKey.name, "Severe key error !!!");
+		
+		oEntityType.entityType = "dummy."+sPath.substr(1);
+		aKey.namespace="dummy";
+		
+		// create a property array with the key as first default value
+		// if not available, function isreloadneeded will error out !!
+		if (!oEntityType.property) {
+			oEntityType.property = [{name : aKey.name, nullable : false}];
+		}
 	};                               	
 	
 	// intercept creation of bindings to create metadata	
@@ -681,12 +608,20 @@ sap.ui.define([
 		return ODataModel.prototype.createBindingContext.apply(this, arguments);		
 	};
 	
+	RestModel.prototype.bindProperty = function(sPath, oContext, mParameters) {
+		this._createmetakey(sPath, mParameters);
+		//console.log("oContext");		
+		//console.log(oContext);
+		return ODataModel.prototype.bindProperty.apply(this, arguments);
+	};	
+	
 	// intercept creation of bindings to create metadata	
 	RestModel.prototype.bindList = function(sPath, oContext, aSorters, aFilters, mParameters) {
 		// get key from params or settings
 		// mimics metadata info
-		this._createmetakey(sPath, mParameters);		
-		return ODataModel.prototype.bindList.apply(this, [sPath, oContext, aSorters, aFilters, mParameters]);		
+		this._createmetakey(sPath, mParameters);
+		//return ODataModel.prototype.bindList.apply(this, [sPath, oContext, aSorters, aFilters, mParameters]);		
+		return ODataModel.prototype.bindList.apply(this, arguments);		
 	};
 
 	// intercept creation of bindings to create metadata	
@@ -706,31 +641,6 @@ sap.ui.define([
 		jQuery.sap.assert(oEntityType, "Could not find entity type of collection \"" + sCollection + "\" in service metadata!");
 		sKey += "/"+oEntityType.key.name;
 		return sKey;
-	};
-	
-	// Intercept just for a single case (select statement) due to missing metadata
-	// Room for improvement
-	RestModel.prototype._isReloadNeeded = function(sFullPath, oData, mParameters) {
-		
-		var sSelectProps, aSelectProps = [];
-		
-		var bResult = ODataModel.prototype._isReloadNeeded.apply(this, arguments);
-		
-		if (bResult) {
-			return true;
-		} else {
-			// Tricky !!
-			// This is needed, while we do not have metadata for this particular aspect !!
-			if (mParameters && mParameters["select"]) {
-				sSelectProps = mParameters["select"].replace(/\s/g, "");
-				aSelectProps = sSelectProps.split(',');
-			}
-			//  This is needed while we do not have enough meta-data available !!			
-			if (aSelectProps.length === 0){
-				return true;
-			}	
-		}
-		return false;
 	};
 	
 	// Override resolveGroup .. it errors out while changing properties !!

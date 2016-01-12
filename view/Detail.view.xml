@@ -57,7 +57,7 @@
 					id="RepoTable"
 					width="auto"
 					class="sapUiResponsiveMargin"
-					items="{dummy}"
+					items="{repos}"
 					noDataText="No repo's found">
 					<columns>
 						<Column>
