@@ -26,8 +26,6 @@ sap.ui.define([
 			var sPath = "/users/"+sId;
 			var oData = oModel.getProperty(sPath);
 
-      //parameters : {select:'login'}
-
 			oView.bindElement({
 				path: sPath,
 				events: {
@@ -38,7 +36,7 @@ sap.ui.define([
 						oView.setBusy(false);
 					}
 				},
-        parameters : {select:'name,company,location,bio,email,avatar_url',key:'login'}
+				parameters : {select:'name,company,location,bio,email,avatar_url,repos_url',key:'login'}
 			});
 			
 			//if there is no data the model has to request new data
@@ -52,6 +50,8 @@ sap.ui.define([
 			} else {
 				var	oRepoTable = oView.byId("RepoTable");
 				var sRepoPath = oData.repos_url;
+				// remove trailing / if needed
+				sRepoPath = sRepoPath.replace(/\/$/g, "");
 				
 				if (sRepoPath) {
 					// repos_url is an absolute http path

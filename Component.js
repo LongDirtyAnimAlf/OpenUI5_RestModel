@@ -23,26 +23,8 @@ sap.ui.define([
 			// call overwritten init (calls createContent)
 			UIComponent.prototype.init.apply(this, arguments);
 
-			//var oModel = new sap.ui.model.rest.RestModel(model.Config.getServiceUrl("/root"));
-			//oModel.setKey("ID");			
 			var oModel = new sap.ui.model.rest.RestModel("https://api.github.com");
 			oModel.setKey("login");			
-
-			oModel.attachRequestCompleted(function(data) {
-				console.log("oModel.attachRequestCompleted");
-				 var model = data.getSource();
-				 console.log(model);
-			});
-			oModel.attachRequestSent(function(data) {
-				console.log("oModel.attachRequestSent");
-				 var model = data.getSource();
-				 console.log(model);
-			});
-			oModel.attachRequestFailed(function(data) {
-				console.log("oModel.attachRequestFailed");
-				 var model = data.getSource();
-				 console.log(model);
-			});
 
 			this.setModel(oModel);
 

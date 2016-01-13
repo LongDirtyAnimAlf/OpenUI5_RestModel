@@ -19,12 +19,14 @@ sap.ui.define([
 	'jquery.sap.global',
     'sap/ui/model/odata/v2/ODataModel',
     'sap/ui/model/Context',
+    './RestMetadata',
     'sap/ui/model/odata/ODataUtils',
 	'sap/ui/model/odata/CountMode', 'sap/ui/model/odata/UpdateMethod', 'sap/ui/model/odata/OperationMode'
 	], function(
 		jQuery,
 		ODataModel,
 		Context,
+		RestMetadata,
 		ODataUtils,
 		CountMode, UpdateMethod, OperationMode
 		) {
@@ -64,13 +66,26 @@ sap.ui.define([
 			this.sDefaultUpdateMethod = UpdateMethod.Put;			
 			
 			this.oHeaders["Accept"] = "application/json";
+			
+			// destroy current metadata object
+			this.oMetadata.destroy();
+			
+			// create new (dummy) metadata object
+			// dummy could even be used to load dataobjects from REST, but not yet now ... work in progress
+			this.oMetadata = new RestMetadata(
+				"",{
+					async: false,
+					user: "",
+					password: "",
+					headers: "",
+					namespaces: null,
+					withCredentials: false
+				} 					
+			);
 
-			// dummy values for the metadata object ... needed !!!
-			this.oMetadata.oMetadata = {version : "0.0"};
-			this.oMetadata.oMetadata.dataServices = {
-					dataServiceVersion: "0.0",
-					schema : []
-			};
+			this.oServiceData.oMetadata = this.oMetadata;
+			this.pAnnotationsLoaded = this.oMetadata.loaded();
+
 			this.oMetadata.bLoaded = true;
 			this.oMetadata.bFailed = false;			
 		},
@@ -242,10 +257,10 @@ sap.ui.define([
 
 			// decrease laundering
 			that.decreaseLaundering(sPath, oRequest.data);
+
+			var oEntityType = that.oMetadata._getEntityTypeByPath(sPath);			
 			
-			// get the key that has been generated during the creation of the binding context
-			var oEntityType = that.oMetadata._getEntityTypeByPath(sPath); 			
-			var sKey = oEntityType.key.name;
+			var sKey = oEntityType.key.propertyRef[0].name;
 			var oProperty = oEntityType.property;			
 			var oNewProperty = [];
 			
@@ -281,7 +296,7 @@ sap.ui.define([
 					}
 					aNewResponse.data = oData;
 				}
-				
+				// generate property namespace info on the fly				
 				$.extend(true, oProperty, oNewProperty);
 			}
 
@@ -563,57 +578,66 @@ sap.ui.define([
 		if (!jQuery.sap.startsWith(sPath, "/")) {
 			return;
 		}		
-		
-		if (!that.oMetadata.mEntityTypes[sPath]) {
-			that.oMetadata.mEntityTypes[sPath] = {};
-		}
-		var oEntityType = that.oMetadata.mEntityTypes[sPath];
 
-		if (!oEntityType.key) {
-			oEntityType.key = {};
-		}
+		// generate namespace info on the fly
 		
-		var aKey = oEntityType.key;		
-		
-		if (!aKey.name) {
-			if (mParameters && mParameters.key) {
-				aKey.name=mParameters.key;			
+		var sKey;
+		if (mParameters && mParameters.key) {
+			sKey=mParameters.key;			
+		} else {
+			if (that.sKey) {
+				sKey = that.sKey;
 			} else {
-				if (that.sKey) {
-					aKey.name = this.sKey;
-				} else {
-					// default value of key
-					aKey.name = "ID";
-				}
+				// default value of key
+				sKey = "ID";
 			}
 		}
-
-		jQuery.sap.assert(aKey.name, "Severe key error !!!");
 		
-		oEntityType.entityType = "dummy."+sPath.substr(1);
-		aKey.namespace="dummy";
-		
-		// create a property array with the key as first default value
-		// if not available, function isreloadneeded will error out !!
-		if (!oEntityType.property) {
-			oEntityType.property = [{name : aKey.name, nullable : false}];
+		var aParts = sPath.replace(/\/$/g, "").split("/");
+		var i = (aParts.length)-1;
+		i = i - ((i+1) % 2);
+		var sName = aParts[i];
+		if (!sName) {
+			return;
 		}
+
+		var oSchema = this.oMetadata.oMetadata.dataServices.schema[0];
+		
+		var bFound;
+		
+		bFound = false;
+		var aEntityType = oSchema.entityType;		
+		jQuery.each(aEntityType, function(i, oEntity) {
+			if (oEntity.name === sName) {
+				bFound = true;
+			}
+		});
+		if (!bFound) {
+			var oEntityObject = {};
+			oEntityObject.namespace = oSchema.namespace;
+			oEntityObject.name = sName;
+			oEntityObject.key = {propertyRef : [{name : sKey}]};
+			oEntityObject.entityType = oEntityObject.namespace+'.'+oEntityObject.name;
+			oEntityObject.property = [];		
+			aEntityType.push(oEntityObject);
+		}
+				
+		bFound = false;
+		var aEntitySet = oSchema.entityContainer[0].entitySet;		
+		jQuery.each(aEntitySet, function(i, oEntity) {
+			if (oEntity.name === sName) {
+				bFound = true;
+			}
+		});
+		if (!bFound) {
+			var oEntitySetObject = {
+					entityType : oSchema.namespace+"."+sName,
+					name : sName
+			};			
+			aEntitySet.push(oEntitySetObject);
+		}
+		
 	};                               	
-	
-	// intercept creation of bindings to create metadata	
-	RestModel.prototype.createBindingContext = function(sPath, oContext, mParameters, fnCallBack, bReload) {
-		// get key from params or settings
-		// mimics metadata info
-		this._createmetakey(sPath, mParameters);
-		return ODataModel.prototype.createBindingContext.apply(this, arguments);		
-	};
-	
-	RestModel.prototype.bindProperty = function(sPath, oContext, mParameters) {
-		this._createmetakey(sPath, mParameters);
-		//console.log("oContext");		
-		//console.log(oContext);
-		return ODataModel.prototype.bindProperty.apply(this, arguments);
-	};	
 	
 	// intercept creation of bindings to create metadata	
 	RestModel.prototype.bindList = function(sPath, oContext, aSorters, aFilters, mParameters) {
@@ -636,10 +660,10 @@ sap.ui.define([
 	// needed for full read/write
 	// on my todo list
 	RestModel.prototype.createKey = function(sCollection, oKeyProperties) {
-		var oEntityType = this.oMetadata._getEntityTypeByPath(sCollection),		
+		var oEntityType = this.oMetadata._getEntityTypeByPath(sCollection),
 		sKey = sCollection;
 		jQuery.sap.assert(oEntityType, "Could not find entity type of collection \"" + sCollection + "\" in service metadata!");
-		sKey += "/"+oEntityType.key.name;
+		sKey += "/"+oEntityType.key.propertyRef[0].name;
 		return sKey;
 	};
 	
